@@ -5,7 +5,6 @@ use rustmq::tklog::{error, info};
 use rustmq::{Uuid, rustmq_interface::DataPackage};
 use std::collections::VecDeque;
 use std::io::{self, Read};
-use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::thread;
 
 #[derive(Clone, Copy, Debug)]
@@ -38,31 +37,26 @@ fn main() {
         .unwrap();
     info!("RustMq URL: {}", &rustmq_url);
 
-    let addr: SocketAddr = rustmq_url
-        .parse()
-        .expect("Cannot parse the url string! Did you include a port number?");
-    let listener = TcpListener::bind(addr).unwrap();
-    println!("RustMQ Stream created, {:?}", addr);
+    println!("RustMQ Stream created, {:?}", rustmq_url);
 
-    for stream in listener.incoming() {
-        let data_pkg = DataPackage {
-            msg: Vec::new(),
-            uuid: Uuid::new_v4().to_string(),
-            msg_queue: VecDeque::new(),
-        };
+    
+    let data_pkg = DataPackage {
+        msg: Vec::new(),
+        uuid: Uuid::new_v4().to_string(),
+        msg_queue: VecDeque::new(),
+    };
 
-        let mut rustmq = RustMQ { data_pkg: data_pkg };
+    let mut rustmq = RustMQ { data_pkg: data_pkg };
 
-        if let Ok(stream) = stream {
-            thread::spawn(move || {
-                // init queue/tcp connection
-                //let _q: Result<Vec<u8>, io::Error> = queue.init_queue(stream, addr);
-                let _q: Result<&Vec<u8>, io::Error> = rustmq.rustmq_init_queue(addr, stream);
-            })
-            .join()
-            .expect("recv msg thread completed.")
-        } else {
-            error!("Couldn't create RustMQ Tcp Stream!")
-        }
+    if let Ok(stream) = stream {
+        thread::spawn(move || {
+            // init queue/tcp connection
+            //let _q: Result<Vec<u8>, io::Error> = queue.init_queue(stream, addr);
+            let _q: Result<&Vec<u8>, io::Error> = rustmq.rustmq_init_queue(rustmq_url, stream);
+        })
+        .join()
+        .expect("recv msg thread completed.")
+    } else {
+        error!("Couldn't create RustMQ Tcp Stream!")
     }
 }

@@ -1,17 +1,15 @@
 use crate::graph_system;
 use crate::tcp_stream_writer::TcpStreamWriter;
+use mini_redis::{client, Result};
 use std::collections::HashMap;
 use std::collections::VecDeque;
-use std::io;
-use std::io::Bytes;
-use std::io::Read;
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::vec::Vec;
 use tklog::{error, info};
 pub use uuid::Uuid;
 
 pub trait RustMQInterface {
-    fn rustmq_init_queue(&mut self, addr: SocketAddr, stream: TcpStream) -> io::Result<&Vec<u8>>;
+    fn rustmq_init_queue(&mut self, addr: String, msg: String) -> io::Result<&Vec<u8>>;
     fn rustmq_create_queue(&mut self) -> &VecDeque<Vec<u8>>;
     fn rustmq_get_queue(&self) -> &VecDeque<Vec<u8>>;
     fn rustmq_set_queue(&mut self, msg_queue: VecDeque<Vec<u8>>);
@@ -30,21 +28,16 @@ pub struct RustMQ {
     pub data_pkg: DataPackage,
 }
 
+#[tokio::main]
 impl RustMQInterface for RustMQ {
-    fn rustmq_init_queue(&mut self, addr: SocketAddr, stream: TcpStream) -> io::Result<&Vec<u8>> {
+    async fn rustmq_init_queue(&mut self, addr: String, msg: String) -> io::Result<&Vec<u8>> {
         info!("RustMQ Stream created, ", addr);
-        let mut tcp_stream_writer = TcpStreamWriter::new(stream)?;
-        //TODO: start setting up the queue creation and messages.
-        //let msg = tcp_stream_writer.read_message()?;
+        let mut client = client::connect(addr).await?;
         self.data_pkg.uuid = Uuid::new_v4().to_string();
-        self.data_pkg
-            .msg_queue
-            .push_back(tcp_stream_writer.read_message().unwrap());
+        self.data_pkg.msg_queue.push_back(client.get(""));
         self.data_pkg.msg = tcp_stream_writer.read_message().unwrap();
         println!("the message from client: {:?}", &self.data_pkg.msg_queue[0]);
         info!("message in queue");
-        // Attempt to convert the Vec<u8> to a String
-
         Ok(&self.data_pkg.msg)
     }
 

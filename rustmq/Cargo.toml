@@ -11,6 +11,7 @@ features = ["v4"]
 [dependencies]
 array2d = "0.3.2"
 inquire = "0.7.5"
+mini-redis = "0.4.1"
 packet = "0.1.4"
 tklog = "0.2.9"
 tokio = "1.54.0"
